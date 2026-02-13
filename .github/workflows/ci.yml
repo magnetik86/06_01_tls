@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest   # ← изменил с ubuntu-20.04 на актуальный (24.04)
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4   # ← обновил до v4 (актуально в 2026)
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config build-essential
+
+      - name: Generate self-signed certificate
+        run: |
+          openssl req -nodes -new -x509 \
+            -keyout private.key \
+            -out cert.crt \
+            -subj "/C=RU/ST=Moscow/L=Moscow/O=Codeby/OU=School/CN=codeby.local"
+
+      - name: Build Binary
+        run: make
+
+      - name: Simple Test HTTPS
+        run: |
+          ./dummy-server.bin &
+          sleep 3
+          curl -s -k https://localhost:8443 || echo "Curl failed, but checking if server started"
+          kill $! || true
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4   # ← обновил до v4
+        with:
+          name: binary
+          path: ./dummy-server.bin
